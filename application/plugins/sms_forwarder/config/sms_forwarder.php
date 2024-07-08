@@ -1,5 +1,5 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+defined('BASEPATH') or exit('No direct script access allowed');
 
 // phpcs:disable CodeIgniter.Commenting.InlineComment.WrongStyle
 /*
@@ -10,3 +10,4 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 |
 */
 // phpcs:enable
+$config['charset'] = 'utf-8';

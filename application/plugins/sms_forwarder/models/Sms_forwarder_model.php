@@ -28,6 +28,22 @@ class Sms_forwarder_model extends CI_Model {
 		return $this->db->get();
 	}
 
+	function get_all_setting()
+	{
+		$this->db->from('plugin_sms_forwarder');
+		$this->db->where('enabled', TRUE);
+
+		return $this->db->get();
+	}
+
+	function get_all_enabled_setting()
+	{
+		$this->db->from('plugin_sms_forwarder');
+		$this->db->where('enabled', TRUE);
+
+		return $this->db->get();
+	}
+
 	function save_setting()
 	{
 		$this->db->set('enabled', $this->input->post('enabled'));

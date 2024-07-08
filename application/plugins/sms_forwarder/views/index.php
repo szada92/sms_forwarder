@@ -1,7 +1,7 @@
 <div id="window_container">
 	<div id="window_title"><?php echo $title; ?></div>
 	<div id="window_content">
-		<?php echo form_open('plugin/sms_to_email/save', array('id' => 'settingsForm')); ?>
+		<?php echo form_open('plugin/sms_forwarder/save', array('id' => 'settingsForm')); ?>
 		<table width="100%" cellpadding="5">
 			<tr valign="top">
 				<td width="175px"><?php echo tr('Enable SMS forwarding'); ?></td>
