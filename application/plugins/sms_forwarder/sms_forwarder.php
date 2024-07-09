@@ -2,7 +2,7 @@
 defined('BASEPATH') or exit('No direct script access allowed');
 /**
  * Plugin Name: SMS forwarder
- * Plugin URI: https://github.com/szada92/sms-forwarder
+ * Plugin URI: https://github.com/szada92/sms_forwarder
  * Version: 0.1
  * Description: SMS forwarder based on configurable rules
  * Author: Dániel Szabó
@@ -12,7 +12,7 @@ defined('BASEPATH') or exit('No direct script access allowed');
 require_once (APPPATH . 'plugins/Plugin_controller.php');
 
 // Add hook for incoming message
-add_action('message.incoming.before', 'sms_forwarder', 11);
+add_action('message.incoming.after', 'sms_forwarder', 11);
 
 /**
  * Function called when plugin first activated
@@ -50,71 +50,67 @@ function sms_forwarder_deactivate()
  */
 function sms_forwarder_install()
 {
-	$CI = &get_instance();
-	$CI->load->helper('kalkun');
-	// check if table already exist
-	if (!$CI->db->table_exists('plugin_sms_forwarder')) {
-		$db_driver = $CI->db->platform();
-		$db_prop = get_database_property($db_driver);
-		execute_sql(APPPATH . 'plugins/sms_forwarder/media/' . $db_prop['file'] . '_sms_forwarder.sql');
-	}
-
 	return TRUE;
 }
 
 function sms_forwarder($sms)
 {
-	// $config = Plugin_helper::get_plugin_config('sms_forwarder');
+	$config = Plugin_helper::get_plugin_config('sms_forwarder');
+	
 	$CI = &get_instance();
+	$CI->load->library('session');
 	$CI->load->model('Message_model');
 	$CI->load->model('Phonebook_model');
 
-	$CI->load->model('Phonebook_model');
-	$CI->load->model('sms_forwarder/sms_forwarder_model', 'sms_forwarder_model');
+	if ($config['enabled'] !== TRUE) {
+		return;
+	}
 
-	$sms_forwards = $CI->sms_to_email_model->get_all_setting();
-	// $CI->email->initialize($config);
-
-	foreach ($sms_forwards as $sms_forward) {
-		if ($sms_forward['enabled'] !== TRUE) {
-			continue;
+	if ($config['trigger_sms_contains'] !== NULL) {
+		if (strpos($sms->TextDecoded, $config['trigger_sms_contains']) === FALSE) {
+			return;
 		}
+	}
 
-		$group_id = $sms_forward['group_id'];
-		$phone_numbers = ['+1234567890', '+0987654321'];
+	// Check if sender is in the list of configurable phone numbers
+	if (in_array($sms->SenderNumber, $config['trigger_sender_phone_number'])) {
+		// Get the members of the phonebook group
+		$group_id = $config['phonebook_group_id'];
 
-		// Check if sender is in the list of configurable phone numbers
+		$get_phonebook_params = array(
+			'id_user' => 1,
+			'option' => 'bygroup',
+			'group_id' => $group_id
+		);
+		$group_members = $CI->Phonebook_model->get_phonebook($get_phonebook_params)->result();
 
-		// if (in_array($sms->SenderNumber, $config['phone_numbers'])) {
-		if (in_array($sms->SenderNumber, $phone_numbers)) {
-			// Get the members of the phonebook group
-			$group_members = $CI->Phonebook_model->get_group_members($group_id);
+		$error = null;
 
+		if (isset($group_members) && isset($sms->TextDecoded)) {
 			// Forward the SMS to each member of the group
 			foreach ($group_members as $member) {
 				try {
 					$data['class'] = '1';
 					$data['dest'] = $member->Number;
+					$data['SenderID'] = NULL;
+					$data['CreatorID'] = '';
 					$data['date'] = date('Y-m-d H:i:s');
 					$data['message'] = $sms->TextDecoded;
+					$data['uid'] = 1;
 					$data['delivery_report'] = 'default';
+
+					// var_dump($data);
+
 					$CI->Message_model->send_messages($data);
 				} catch (Exception $e) {
-					throw $e;
+					// var_dump($e);
+					$error = $e;
 				}
 			}
 		}
+
+		if ($error !== null) {
+			throw $error;
+		}
 	}
-
-
-	// $config = Plugin_helper::get_plugin_config('simple_autoreply');
-	// $CI = &get_instance();
-	// $CI->load->model('Message_model');
-	// $data['class'] = '1';
-	// $data['dest'] = $sms->SenderNumber;
-	// $data['date'] = date('Y-m-d H:i:s');
-	// $data['message'] = $config['message'];
-	// $data['delivery_report'] = 'default';
-	// $data['uid'] = $config['uid'];
-	// $CI->Message_model->send_messages($data);
 }
